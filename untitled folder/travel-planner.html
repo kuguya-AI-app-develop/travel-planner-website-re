@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>旅行策划 — Travel Planner</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:oklch(97.8% 0.006 250);
+  --surface:oklch(100% 0 0);
+  --sidebar:oklch(96.8% 0.008 250);
+  --sidebar-hover:oklch(94.5% 0.012 250);
+  --sidebar-active:oklch(93% 0.02 255);
+  --fg:oklch(16% 0.012 250);
+  --muted:oklch(54% 0.012 250);
+  --muted-light:oklch(68% 0.008 250);
+  --border:oklch(91% 0.006 250);
+  --border-light:oklch(94% 0.004 250);
+  --accent:oklch(58% 0.19 260);
+  --accent-hover:oklch(52% 0.2 260);
+  --accent-subtle:oklch(95.5% 0.025 260);
+  --accent-glow:oklch(58% 0.19 260 / 12%);
+  --success:oklch(62% 0.17 150);
+  --success-subtle:oklch(95.5% 0.04 150);
+  --warn:oklch(76% 0.14 80);
+  --warn-subtle:oklch(96% 0.04 80);
+  --danger:oklch(56% 0.2 25);
+  --danger-subtle:oklch(95.5% 0.04 25);
+  --font-display:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif;
+  --font-body:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;
+  --font-mono:'SF Mono','JetBrains Mono',ui-monospace,Menlo,monospace;
+  --sidebar-w:232px;
+  --radius:8px;
+  --radius-lg:12px;
+  --radius-xl:16px;
+  --shadow-sm:0 1px 2px oklch(0% 0 0 / 5%);
+  --shadow-md:0 4px 12px oklch(0% 0 0 / 7%);
+  --shadow-lg:0 8px 28px oklch(0% 0 0 / 10%);
+}
+html{font-size:14px}
+body{font-family:var(--font-body);color:var(--fg);background:var(--bg);display:flex;min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.55}
+
+/* Sidebar */
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--sidebar);border-right:1px solid var(--border);padding:16px 10px 24px;display:flex;flex-direction:column;gap:2px;position:fixed;left:0;top:0;z-index:100}
+.sidebar-brand{font-weight:700;font-size:14px;padding:8px 12px 20px;letter-spacing:-0.02em;display:flex;align-items:center;gap:10px;color:var(--fg)}
+.sidebar-brand svg{flex-shrink:0}
+.sidebar-label{font-size:10.5px;font-weight:600;color:var(--muted-light);padding:18px 14px 6px;letter-spacing:.06em;text-transform:uppercase}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:var(--radius);cursor:pointer;font-size:13.5px;color:var(--muted);transition:all .15s;user-select:none;position:relative}
+.sidebar-item:hover{background:var(--sidebar-hover);color:var(--fg)}
+.sidebar-item.active{background:var(--sidebar-active);color:var(--accent);font-weight:600;box-shadow:var(--shadow-sm)}
+.sidebar-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--accent);border-radius:0 3px 3px 0}
+.sidebar-item svg{width:16px;height:16px;flex-shrink:0;opacity:.45}
+.sidebar-item.active svg{opacity:.85}
+.sidebar-divider{height:1px;background:var(--border-light);margin:8px 12px}
+.sidebar-cover-toggle{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:var(--radius);cursor:pointer;font-size:12px;color:var(--muted);transition:all .15s;user-select:none;margin-top:8px}
+.sidebar-cover-toggle:hover{background:var(--sidebar-hover);color:var(--fg)}
+.toggle-track{width:36px;height:20px;border-radius:10px;position:relative;transition:background .25s;flex-shrink:0;cursor:pointer}
+.toggle-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;background:white;border-radius:50%;transition:left .25s cubic-bezier(.4,0,.2,1);box-shadow:0 1px 3px oklch(0% 0 0 / 20%)}
+
+/* Main */
+.main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column}
+.section{display:none;padding:0 48px 64px}
+.section.active{display:block}
+
+/* Cover */
+.cover-wrapper{position:relative;width:100%;flex-shrink:0;overflow:hidden;transition:max-height .4s ease}
+.cover-wrapper.hidden{max-height:0!important}
+.cover{position:relative;width:100%;max-height:280px;overflow:hidden;background:linear-gradient(135deg,oklch(92% 0.02 260),oklch(94% 0.015 200));cursor:default}
+.cover.has-image{cursor:grab}
+.cover.has-image:active{cursor:grabbing}
+.cover img{width:100%;height:280px;object-fit:cover;display:none;transition:opacity .3s;pointer-events:none;-webkit-user-drag:none}
+.cover.has-image img{display:block}
+.cover-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,oklch(0% 0 0 / 0%),oklch(0% 0 0 / 25%));pointer-events:none}
+.cover-hint{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:11px;color:white;background:oklch(0% 0 0 / 40%);padding:4px 12px;border-radius:20px;backdrop-filter:blur(4px);opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+.cover.has-image:hover .cover-hint{opacity:1}
+.cover-actions{position:absolute;top:14px;right:14px;display:flex;gap:6px;z-index:10;opacity:0;transition:opacity .2s}
+.cover:hover .cover-actions{opacity:1}
+.cover-btn{padding:5px 13px;border-radius:var(--radius);font-size:12px;font-weight:500;cursor:pointer;border:none;background:oklch(100% 0 0 / 85%);color:var(--fg);backdrop-filter:blur(10px);font-family:var(--font-body);transition:all .12s;white-space:nowrap}
+.cover-btn:hover{background:oklch(100% 0 0 / 95%)}
+.cover-btn.danger{color:var(--danger)}
+.cover-empty{display:flex;align-items:center;justify-content:center;width:100%;padding:16px 48px}
+.cover-add{display:flex;align-items:center;gap:8px;padding:10px 20px;border:1.5px dashed var(--border);border-radius:var(--radius-lg);cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);background:transparent;transition:all .2s;font-family:var(--font-body);width:fit-content}
+.cover-add:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-subtle)}
+.cover-add svg{width:16px;height:16px}
+
+/* Section header */
+.section-header{margin-bottom:28px;padding-top:6px}
+.section-header h1{font-family:var(--font-display);font-size:26px;font-weight:700;letter-spacing:-0.03em;line-height:1.2;color:var(--fg)}
+.section-header p{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.5}
+
+/* Calendar */
+.cal-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.cal-toolbar h2{font-family:var(--font-display);font-size:15px;font-weight:600;letter-spacing:-0.01em;min-width:130px}
+.cal-toolbar button{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);transition:all .15s;font-family:var(--font-body);box-shadow:var(--shadow-sm)}
+.cal-toolbar button:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.cal-legend{display:flex;gap:12px;margin-left:auto}
+.cal-legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);font-weight:500}
+.cal-legend-color{width:10px;height:10px;border-radius:4px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:var(--surface);box-shadow:var(--shadow-sm)}
+.cal-header{background:var(--sidebar);padding:10px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.cal-day{min-height:100px;padding:8px 10px;border-right:1px solid var(--border-light);border-bottom:1px solid var(--border-light);position:relative;cursor:default;transition:background .12s}
+.cal-day:nth-child(7n){border-right:none}
+.cal-day.other-month{background:oklch(97.5% 0.004 250)}
+.cal-day.other-month .cal-date{color:oklch(80% 0.006 250)}
+.cal-day.today .cal-date{background:var(--accent);color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.cal-date{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px;user-select:none}
+.cal-day.other-month .cal-date{font-weight:400}
+.cal-trip-bar{position:absolute;left:6px;right:6px;height:24px;border-radius:5px;font-size:11px;font-weight:600;color:white;padding:0 8px;display:flex;align-items:center;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2;transition:box-shadow .15s,transform .1s;user-select:none;letter-spacing:0}
+.cal-trip-bar:hover{box-shadow:0 3px 10px oklch(0% 0 0 / 20%);transform:translateY(-1px)}
+.cal-trip-bar.dragging{opacity:.45;cursor:grabbing;box-shadow:0 4px 16px oklch(0% 0 0 / 22%)}
+.cal-trip-bar.trip-start{border-radius:5px 0 0 5px}
+.cal-trip-bar.trip-mid{border-radius:0}
+.cal-trip-bar.trip-end{border-radius:0 5px 5px 0}
+.cal-trip-bar.trip-single{border-radius:5px}
+.cal-day.drag-over{background:var(--accent-subtle)}
+.trip-delete{position:absolute;top:4px;right:6px;font-size:10px;cursor:pointer;opacity:0;color:white;background:oklch(0% 0 0 / 25%);border-radius:3px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;transition:opacity .12s}
+.cal-trip-bar:hover .trip-delete{opacity:1}
+
+/* Modals */
+.modal-overlay{position:fixed;inset:0;background:oklch(0% 0 0 / 20%);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:200}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-xl);padding:28px 32px;width:400px;box-shadow:var(--shadow-lg);animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:20px;letter-spacing:-0.02em}
+.modal label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;margin-top:14px;font-weight:500}
+.modal label:first-of-type{margin-top:0}
+.modal input,.modal select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font-body);outline:none;transition:all .15s;background:var(--surface)}
+.modal input:focus,.modal select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.modal-actions{display:flex;gap:8px;margin-top:22px;justify-content:flex-end;align-items:center}
+.modal-delete-link{font-size:12px;color:var(--danger);cursor:pointer;margin-right:auto;transition:opacity .12s;background:none;border:none;font-family:var(--font-body);padding:0;font-weight:500}
+.modal-delete-link:hover{opacity:.7}
+.btn{padding:7px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--fg);transition:all .15s;font-family:var(--font-body)}
+.btn:hover{background:var(--sidebar)}
+.btn-primary{background:var(--accent);color:white;border-color:var(--accent);box-shadow:0 1px 3px var(--accent-glow)}
+.btn-primary:hover{background:var(--accent-hover);filter:none}
+
+/* Timeline */
+.timeline{margin-top:20px;padding:18px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)}
+.timeline h3{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:14px;letter-spacing:.06em;text-transform:uppercase}
+.timeline-bar{position:relative;height:34px;background:var(--sidebar);border-radius:var(--radius);overflow:hidden;margin-bottom:10px}
+.timeline-segment{position:absolute;top:5px;height:24px;border-radius:5px;display:flex;align-items:center;padding:0 10px;font-size:11px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0}
+.timeline-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted-light)}
+
+/* Tables */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-sm)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--sidebar)}
+th{text-align:left;padding:11px 14px;font-weight:600;color:var(--muted);font-size:11.5px;border-bottom:1px solid var(--border);letter-spacing:.02em;white-space:nowrap;text-transform:uppercase}
+td{padding:10px 14px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:oklch(98% 0.004 250)}
+td[contenteditable]{cursor:text;outline:none;transition:background .12s;border-radius:4px}
+td[contenteditable]:focus{background:var(--accent-subtle)}
+.table-actions{display:flex;gap:8px;margin-top:14px}
+.btn-sm{padding:6px 14px;font-size:12px;font-weight:500;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--muted);transition:all .15s;font-family:var(--font-body)}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.btn-danger{color:var(--danger);border-color:transparent}
+.btn-danger:hover{background:var(--danger-subtle);border-color:var(--danger)}
+
+/* Status pills */
+.pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.02em}
+.pill-booked{background:var(--success-subtle);color:oklch(42% 0.14 150)}
+.pill-pending{background:var(--warn-subtle);color:oklch(48% 0.12 80)}
+.pill-compare{background:var(--accent-subtle);color:var(--accent)}
+
+/* Rating stars */
+.stars{display:flex;gap:2px;justify-content:center}
+.star{width:18px;height:18px;cursor:pointer;color:var(--border);transition:all .12s}
+.star.filled{color:oklch(70% 0.16 85)}
+.star:hover{color:oklch(65% 0.18 70);transform:scale(1.1)}
+
+/* Score bar */
+.score-bar-wrap{display:flex;align-items:center;gap:8px}
+.score-bar{flex:1;height:6px;background:var(--border-light);border-radius:3px;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:3px;transition:width .35s ease}
+.score-value{font-size:12px;font-weight:700;font-family:var(--font-mono);min-width:28px;text-align:right}
+
+/* Select checkbox */
+.select-cell{text-align:center;width:44px}
+.select-cell input[type="checkbox"]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+
+/* Criteria header */
+.criteria-cell{position:relative}
+.criteria-cell .criteria-delete{display:none;position:absolute;top:4px;right:4px;font-size:10px;cursor:pointer;color:var(--muted);background:var(--sidebar);border-radius:3px;width:16px;height:16px;align-items:center;justify-content:center;line-height:1}
+.criteria-cell:hover .criteria-delete{display:flex}
+.criteria-cell .criteria-delete:hover{color:var(--danger);background:var(--danger-subtle)}
+th[contenteditable]{cursor:text;outline:none;transition:background .12s;border-radius:4px}
+th[contenteditable]:focus{background:var(--accent-subtle)}
+
+/* Summary */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:32px}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow-sm);transition:box-shadow .15s,transform .15s}
+.summary-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.summary-card-label{font-size:11.5px;color:var(--muted);margin-bottom:8px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+.summary-card-value{font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:-0.03em}
+.summary-card-note{font-size:11.5px;color:var(--muted-light);margin-top:6px}
+
+/* Checklist */
+.checklist{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm)}
+.checklist-header{padding:14px 18px;font-size:13px;font-weight:600;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.checklist-header .btn-sm{font-size:11px;padding:4px 12px}
+.checklist-item{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--border-light);transition:background .12s}
+.checklist-item:last-child{border-bottom:none}
+.checklist-item:hover{background:oklch(98.5% 0.003 250)}
+.checklist-item input[type="checkbox"]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.checklist-item.done .checklist-text{text-decoration:line-through;color:var(--muted-light)}
+.checklist-text{flex:1;font-size:13px;outline:none}
+.checklist-text:focus{background:var(--accent-subtle);border-radius:4px;padding:0 4px;margin:0 -4px}
+.checklist-delete{opacity:0;color:var(--muted);cursor:pointer;font-size:14px;transition:all .12s}
+.checklist-item:hover .checklist-delete{opacity:1}
+.checklist-delete:hover{color:var(--danger)}
+
+/* Itinerary */
+.itinerary{margin-top:28px}
+.itinerary h3{font-size:12px;font-weight:600;margin-bottom:14px;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+.itinerary-day{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;overflow:hidden;box-shadow:var(--shadow-sm)}
+.itinerary-day-header{padding:12px 18px;font-size:13px;font-weight:500;background:var(--sidebar);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px}
+.itinerary-day-header span{font-weight:400;color:var(--muted);font-size:12px}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 24px;border-radius:var(--radius-lg);font-size:13px;font-weight:500;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;box-shadow:var(--shadow-lg)}
+.toast.show{opacity:1}
+
+.cal-grid{overflow-x:auto}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="18" height="18" rx="5" fill="var(--accent-subtle)" stroke="var(--accent)" stroke-width="1.2"/><path d="M7 11h8M11 7v8" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"/></svg>
+    旅行策划
+  </div>
+  <div class="sidebar-label">规划</div>
+  <div class="sidebar-item active" data-tab="calendar" onclick="switchTab('calendar')">
+    <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 8.5h14M7 2v4M13 2v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    行程日历
+  </div>
+  <div class="sidebar-item" data-tab="flights" onclick="switchTab('flights')">
+    <svg viewBox="0 0 20 20" fill="none"><path d="M3 14l4-1.5V6l2.5 1v5.5L14 9v3l-4.5 2V19l-2-1v-4L3 16v-2z" fill="currentColor" opacity=".22" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+    机票对比
+  </div>
+  <div class="sidebar-item" data-tab="hotels" onclick="switchTab('hotels')">
+    <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="8" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M7 8V6.5a3 3 0 016 0V8" stroke="currentColor" stroke-width="1.3"/><rect x="8.5" y="11" width="3" height="3.5" rx=".8" fill="currentColor" opacity=".15"/></svg>
+    酒店评分
+  </div>
+  <div class="sidebar-divider"></div>
+  <div class="sidebar-label">汇总</div>
+  <div class="sidebar-item" data-tab="summary" onclick="switchTab('summary')">
+    <svg viewBox="0 0 20 20" fill="none"><path d="M4 5h12M4 10h8M4 15h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="16" cy="15" r="2.5" fill="currentColor" opacity=".2" stroke="currentColor" stroke-width="1"/></svg>
+    预算总结
+  </div>
+  <div style="flex:1"></div>
+  <div class="sidebar-cover-toggle" onclick="toggleCoverVisibility()">
+    <svg viewBox="0 0 16 16" fill="none" width="14" height="14"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M1 10l4-3 3 2 3-4 4 5" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+    封面背景
+    <div class="toggle-track" id="cover-toggle"><div class="toggle-thumb" id="cover-toggle-thumb"></div></div>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="cover-wrapper" id="cover-wrapper">
+    <div class="cover" id="cover">
+      <img id="cover-img" src="" alt="" draggable="false">
+      <div class="cover-overlay"></div>
+      <div class="cover-hint">拖动图片调整显示区域</div>
+      <div class="cover-actions">
+        <label class="cover-btn" style="cursor:pointer">更换图片<input type="file" accept="image/*" id="cover-file" style="display:none" onchange="handleCoverUpload(event)"></label>
+        <button class="cover-btn danger" onclick="removeCover()">移除封面</button>
+      </div>
+    </div>
+    <div class="cover-empty" id="cover-empty">
+      <label class="cover-add" style="cursor:pointer">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        添加封面图片
+        <input type="file" accept="image/*" style="display:none" onchange="handleCoverUpload(event)">
+      </label>
+    </div>
+  </div>
+
+  <div class="section active" id="sec-calendar">
+    <div class="section-header">
+      <h1>行程日历</h1>
+      <p>拖拽行程条调整日期，单击行程条编辑，双击空白日期添加新行程</p>
+    </div>
+    <div class="cal-toolbar">
+      <button onclick="calNav(-1)">← 上月</button>
+      <h2 id="cal-month-label"></h2>
+      <button onclick="calNav(1)">下月 →</button>
+      <button onclick="calToday()">今天</button>
+      <div class="cal-legend" id="cal-legend"></div>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="timeline" id="timeline">
+      <h3>时间轴</h3>
+      <div class="timeline-bar" id="timeline-bar"></div>
+      <div class="timeline-labels" id="timeline-labels"></div>
+    </div>
+  </div>
+
+  <div class="section" id="sec-flights">
+    <div class="section-header">
+      <h1>机票价格对比</h1>
+      <p>勾选已确定的航班，价格将计入预算总结。点击单元格可直接编辑</p>
+    </div>
+    <div class="table-wrap">
+      <table id="flights-table">
+        <thead>
+          <tr>
+            <th class="select-cell">选定</th>
+            <th>航空公司</th><th>航班号</th><th>出发 → 到达</th>
+            <th>出发时间</th><th>到达时间</th><th>价格 (¥)</th>
+            <th>舱位</th><th>状态</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="flights-body"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button class="btn-sm" onclick="addFlight()">+ 添加航班</button>
+    </div>
+  </div>
+
+  <div class="section" id="sec-hotels">
+    <div class="section-header">
+      <h1>目的地 / 酒店评分</h1>
+      <p>勾选最终选择的酒店，价格将计入预算总结。点击星星评分，维度名称可编辑</p>
+    </div>
+    <div class="table-wrap" style="overflow-x:auto">
+      <table id="hotels-table">
+        <thead id="hotels-thead"></thead>
+        <tbody id="hotels-body"></tbody>
+      </table>
+    </div>
+    <div class="table-actions">
+      <button class="btn-sm" onclick="addHotel()">+ 添加酒店</button>
+      <button class="btn-sm" onclick="openCriteriaModal()">+ 添加评分维度</button>
+    </div>
+  </div>
+
+  <div class="section" id="sec-summary">
+    <div class="section-header">
+      <h1>预算总结</h1>
+      <p>仅统计已勾选的航班和酒店</p>
+    </div>
+    <div class="summary-grid" id="summary-cards"></div>
+    <div class="checklist" id="checklist">
+      <div class="checklist-header">
+        待办事项
+        <button class="btn-sm" onclick="addCheckItem()">+ 添加</button>
+      </div>
+      <div id="checklist-items"></div>
+    </div>
+    <div class="itinerary" id="itinerary-summary"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="trip-modal">
+  <div class="modal">
+    <h3 id="trip-modal-title">添加行程</h3>
+    <input type="hidden" id="trip-edit-id" value="">
+    <label>行程名称</label>
+    <input id="trip-name" placeholder="例如：抵达东京">
+    <label>开始日期</label>
+    <input id="trip-start" type="date">
+    <label>结束日期</label>
+    <input id="trip-end" type="date">
+    <label>颜色标签</label>
+    <select id="trip-color">
+      <option value="oklch(58% 0.19 260)">蓝色</option>
+      <option value="oklch(60% 0.18 150)">绿色</option>
+      <option value="oklch(68% 0.16 55)">橙色</option>
+      <option value="oklch(56% 0.18 300)">紫色</option>
+      <option value="oklch(58% 0.2 25)">红色</option>
+      <option value="oklch(60% 0.12 190)">青色</option>
+    </select>
+    <div class="modal-actions">
+      <button class="modal-delete-link" id="trip-modal-delete" onclick="deleteFromModal()" style="display:none">删除此行程</button>
+      <button class="btn" onclick="closeTripModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveTrip()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="criteria-modal">
+  <div class="modal">
+    <h3>添加评分维度</h3>
+    <label>维度名称</label>
+    <input id="criteria-name" placeholder="例如：早餐质量、泳池、隔音…">
+    <div class="modal-actions">
+      <button class="btn" onclick="closeCriteriaModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveCriteria()">添加</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TODAY = new Date(2026, 4, 9);
+let calYear = 2026, calMonth = 4;
+
+let trips = [
+  { id: 1, name: '东京购物之旅', start: '2026-05-18', end: '2026-05-22', color: 'oklch(58% 0.19 260)' },
+  { id: 2, name: '京都赏樱', start: '2026-05-10', end: '2026-05-13', color: 'oklch(60% 0.18 150)' },
+  { id: 3, name: '大阪美食', start: '2026-05-14', end: '2026-05-15', color: 'oklch(68% 0.16 55)' },
+];
+
+let flights = [
+  { id: 1, airline: '全日空航空', code: 'NH919', route: '上海 → 东京', dep: '08:30', arr: '12:45', price: 3280, cls: '经济舱', status: 'booked', selected: true },
+  { id: 2, airline: '春秋航空', code: '9C6215', route: '东京 → 上海', dep: '19:00', arr: '21:30', price: 1899, cls: '经济舱', status: 'pending', selected: false },
+  { id: 3, airline: '吉祥航空', code: 'HO1335', route: '上海 → 大阪', dep: '10:15', arr: '14:00', price: 2450, cls: '经济舱', status: 'compare', selected: false },
+];
+
+let hotelCriteria = ['性价比', '位置', '卫生', '设施', '服务'];
+let hotels = [
+  { id: 1, name: '东京新宿酒店', location: '新宿', price: '¥680/晚', priceNum: 680, scores: [4, 5, 4, 4, 3], selected: true },
+  { id: 2, name: '浅草旅馆', location: '浅草', price: '¥420/晚', priceNum: 420, scores: [5, 3, 3, 3, 4], selected: false },
+  { id: 3, name: '银座高端酒店', location: '银座', price: '¥1200/晚', priceNum: 1200, scores: [3, 5, 5, 5, 5], selected: false },
+];
+
+let checklistItems = [
+  { id: 1, text: '购买上海→东京机票', done: true },
+  { id: 2, text: '购买东京→上海机票', done: false },
+  { id: 3, text: '预订东京新宿酒店', done: false },
+  { id: 4, text: '办理日本签证', done: true },
+  { id: 5, text: '购买旅行保险', done: false },
+  { id: 6, text: '兑换日元', done: false },
+  { id: 7, text: '购买迪士尼门票', done: false },
+];
+
+let nextId = { trip: 4, flight: 4, hotel: 4, check: 8 };
+
+/* ===== Cover ===== */
+let coverPos = { x: 50, y: 50 };
+let coverVisible = true;
+
+function initCover() {
+  const saved = localStorage.getItem('tp-cover');
+  const savedPos = localStorage.getItem('tp-cover-pos');
+  const savedVisible = localStorage.getItem('tp-cover-visible');
+
+  coverVisible = savedVisible !== 'false';
+
+  if (!coverVisible) {
+    document.getElementById('cover-wrapper').classList.add('hidden');
+  }
+
+  if (savedPos) {
+    try { coverPos = JSON.parse(savedPos); } catch(e) {}
+  }
+
+  updateCoverToggle();
+
+  if (saved) {
+    showCoverImage(saved);
+  }
+}
+
+function showCoverImage(src) {
+  const img = document.getElementById('cover-img');
+  img.src = src;
+  img.style.display = 'block';
+  img.style.objectPosition = coverPos.x + '% ' + coverPos.y + '%';
+  document.getElementById('cover').classList.add('has-image');
+  document.getElementById('cover-empty').style.display = 'none';
+  initCoverDrag();
+}
+
+function handleCoverUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const dataUrl = ev.target.result;
+    coverPos = { x: 50, y: 50 };
+    localStorage.setItem('tp-cover', dataUrl);
+    localStorage.setItem('tp-cover-pos', JSON.stringify(coverPos));
+    showCoverImage(dataUrl);
+    toast('封面已更新');
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function removeCover() {
+  document.getElementById('cover-img').src = '';
+  document.getElementById('cover-img').style.display = 'none';
+  document.getElementById('cover').classList.remove('has-image');
+  document.getElementById('cover-empty').style.display = '';
+  localStorage.removeItem('tp-cover');
+  localStorage.removeItem('tp-cover-pos');
+  destroyCoverDrag();
+  toast('封面已移除');
+}
+
+function toggleCoverVisibility() {
+  coverVisible = !coverVisible;
+  const wrapper = document.getElementById('cover-wrapper');
+  if (coverVisible) {
+    wrapper.classList.remove('hidden');
+  } else {
+    wrapper.classList.add('hidden');
+  }
+  localStorage.setItem('tp-cover-visible', coverVisible);
+  updateCoverToggle();
+}
+
+function updateCoverToggle() {
+  const track = document.getElementById('cover-toggle');
+  const thumb = document.getElementById('cover-toggle-thumb');
+  if (coverVisible) {
+    track.style.background = 'var(--accent)';
+    thumb.style.left = '18px';
+  } else {
+    track.style.background = 'var(--muted-light)';
+    thumb.style.left = '2px';
+  }
+}
+
+/* Cover drag to reposition */
+let coverDrag = { active: false, startX: 0, startY: 0, startPosX: 50, startPosY: 50 };
+
+function initCoverDrag() {
+  const cover = document.getElementById('cover');
+  cover.removeEventListener('mousedown', coverMouseDown);
+  cover.addEventListener('mousedown', coverMouseDown);
+}
+
+function destroyCoverDrag() {
+  document.removeEventListener('mousemove', coverMouseMove);
+  document.removeEventListener('mouseup', coverMouseUp);
+}
+
+function coverMouseDown(e) {
+  if (e.target.closest('.cover-actions') || e.target.closest('label') || e.target.closest('button')) return;
+  const cover = document.getElementById('cover');
+  if (!cover.classList.contains('has-image')) return;
+
+  coverDrag.active = true;
+  coverDrag.startX = e.clientX;
+  coverDrag.startY = e.clientY;
+  coverDrag.startPosX = coverPos.x;
+  coverDrag.startPosY = coverPos.y;
+  e.preventDefault();
+
+  document.addEventListener('mousemove', coverMouseMove);
+  document.addEventListener('mouseup', coverMouseUp);
+}
+
+function coverMouseMove(e) {
+  if (!coverDrag.active) return;
+  const cover = document.getElementById('cover');
+  const rect = cover.getBoundingClientRect();
+  const dx = (e.clientX - coverDrag.startX) / rect.width * 100;
+  const dy = (e.clientY - coverDrag.startY) / rect.height * 100;
+
+  coverPos.x = Math.max(0, Math.min(100, coverDrag.startPosX + dx));
+  coverPos.y = Math.max(0, Math.min(100, coverDrag.startPosY + dy));
+
+  const img = document.getElementById('cover-img');
+  img.style.objectPosition = coverPos.x + '% ' + coverPos.y + '%';
+}
+
+function coverMouseUp() {
+  if (coverDrag.active) {
+    coverDrag.active = false;
+    localStorage.setItem('tp-cover-pos', JSON.stringify(coverPos));
+  }
+  document.removeEventListener('mousemove', coverMouseMove);
+  document.removeEventListener('mouseup', coverMouseUp);
+}
+
+/* ===== Tab ===== */
+function switchTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item[data-tab]').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + tab).classList.add('active');
+  document.querySelector('.sidebar-item[data-tab="' + tab + '"]').classList.add('active');
+  if (tab === 'summary') renderSummary();
+  if (tab === 'hotels') renderHotels();
+  if (tab === 'flights') renderFlights();
+}
+
+/* ===== Calendar ===== */
+const MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const DAY_NAMES = ['日','一','二','三','四','五','六'];
+
+function parseDate(s) { const p = s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+function fmtDate(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
+
+function calNav(d) {
+  calMonth += d;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+}
+function calToday() { calYear = TODAY.getFullYear(); calMonth = TODAY.getMonth(); renderCalendar(); }
+
+function renderCalendar() {
+  document.getElementById('cal-month-label').textContent = calYear + '年 ' + MONTH_NAMES[calMonth];
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  DAY_NAMES.forEach(d => { const h = document.createElement('div'); h.className = 'cal-header'; h.textContent = d; grid.appendChild(h); });
+
+  const first = new Date(calYear, calMonth, 1);
+  const startDay = first.getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const prevDays = new Date(calYear, calMonth, 0).getDate();
+  const totalCells = Math.ceil((startDay + daysInMonth) / 7) * 7;
+
+  for (let i = 0; i < totalCells; i++) {
+    const day = document.createElement('div');
+    day.className = 'cal-day';
+    const dateNum = document.createElement('div');
+    dateNum.className = 'cal-date';
+    let d, isOther = false;
+    if (i < startDay) {
+      d = prevDays - startDay + 1 + i;
+      dateNum.textContent = d;
+      isOther = true;
+      day.classList.add('other-month');
+    } else if (i >= startDay + daysInMonth) {
+      d = i - startDay - daysInMonth + 1;
+      dateNum.textContent = d;
+      isOther = true;
+      day.classList.add('other-month');
+    } else {
+      d = i - startDay + 1;
+      dateNum.textContent = d;
+      if (calYear === TODAY.getFullYear() && calMonth === TODAY.getMonth() && d === TODAY.getDate()) {
+        day.classList.add('today');
+      }
+    }
+    const actualDate = isOther
+      ? (i < startDay ? new Date(calYear, calMonth-1, d) : new Date(calYear, calMonth+1, d))
+      : new Date(calYear, calMonth, d);
+    day.dataset.date = fmtDate(actualDate);
+    day.appendChild(dateNum);
+    day.addEventListener('dragover', e => { e.preventDefault(); day.classList.add('drag-over'); });
+    day.addEventListener('dragleave', () => day.classList.remove('drag-over'));
+    day.addEventListener('drop', e => { e.preventDefault(); day.classList.remove('drag-over'); handleDrop(day.dataset.date); });
+    day.addEventListener('dblclick', () => openAddTripModal(day.dataset.date));
+    grid.appendChild(day);
+  }
+  renderTripBars();
+  renderTimeline();
+  renderLegend();
+}
+
+function renderTripBars() {
+  const grid = document.getElementById('cal-grid');
+  const allDays = grid.querySelectorAll('.cal-day');
+  const dayMap = {};
+  allDays.forEach((d, i) => { dayMap[d.dataset.date] = { el: d, index: i }; });
+
+  trips.forEach(trip => {
+    const tStart = parseDate(trip.start);
+    const tEnd = parseDate(trip.end);
+    let current = new Date(tStart);
+    while (current <= tEnd) {
+      const dateStr = fmtDate(current);
+      const info = dayMap[dateStr];
+      if (info) {
+        const dayOfWeek = current.getDay();
+        const daysLeftInWeek = 6 - dayOfWeek;
+        const daysLeftInTrip = daysBetween(current, tEnd);
+        const span = Math.min(daysLeftInWeek, daysLeftInTrip) + 1;
+
+        const bar = document.createElement('div');
+        bar.className = 'cal-trip-bar';
+        bar.draggable = true;
+        bar.dataset.tripId = trip.id;
+        bar.style.background = trip.color;
+        bar.style.top = (26 + getTripTopOffset(info.el)) + 'px';
+        bar.style.gridColumn = (dayOfWeek + 1) + ' / span ' + span;
+
+        const label = document.createElement('span');
+        label.textContent = trip.name;
+        label.style.pointerEvents = 'none';
+        bar.appendChild(label);
+
+        if (span === 1) bar.classList.add('trip-single');
+        else if (dayOfWeek === 0) bar.classList.add('trip-start');
+        else bar.classList.add('trip-mid');
+
+        let didDrag = false;
+        let startX = 0, startY = 0;
+
+        bar.addEventListener('mousedown', e => {
+          didDrag = false;
+          startX = e.clientX;
+          startY = e.clientY;
+        });
+        bar.addEventListener('mousemove', e => {
+          if (Math.abs(e.clientX - startX) > 3 || Math.abs(e.clientY - startY) > 3) {
+            didDrag = true;
+          }
+        });
+        bar.addEventListener('click', e => {
+          if (!didDrag) {
+            e.stopPropagation();
+            openEditTripModal(trip.id);
+          }
+        });
+
+        bar.addEventListener('dragstart', e => {
+          didDrag = true;
+          e.dataTransfer.setData('text/plain', trip.id);
+          bar.classList.add('dragging');
+        });
+        bar.addEventListener('dragend', () => bar.classList.remove('dragging'));
+
+        const del = document.createElement('span');
+        del.className = 'trip-delete';
+        del.textContent = '×';
+        del.onclick = e => { e.stopPropagation(); deleteTrip(trip.id); };
+        bar.appendChild(del);
+
+        info.el.appendChild(bar);
+      }
+      current.setDate(current.getDate() + 1);
+      if (current.getDay() === 0 && current <= tEnd) break;
+    }
+  });
+}
+
+function getTripTopOffset(dayEl) {
+  return dayEl.querySelectorAll('.cal-trip-bar').length * 26;
+}
+
+function handleDrop(dateStr) {
+  const tripId = +event.dataTransfer.getData('text/plain');
+  const trip = trips.find(t => t.id === tripId);
+  if (!trip) return;
+  const oldStart = parseDate(trip.start);
+  const newStart = parseDate(dateStr);
+  const diff = daysBetween(oldStart, newStart);
+  const oldEnd = parseDate(trip.end);
+  const newEnd = new Date(oldEnd);
+  newEnd.setDate(newEnd.getDate() + diff);
+  trip.start = fmtDate(newStart);
+  trip.end = fmtDate(newEnd);
+  renderCalendar();
+  toast('行程已移动');
+}
+
+function deleteTrip(id) {
+  trips = trips.filter(t => t.id !== id);
+  renderCalendar();
+  toast('行程已删除');
+}
+
+function openAddTripModal(date) {
+  document.getElementById('trip-modal-title').textContent = '添加行程';
+  document.getElementById('trip-edit-id').value = '';
+  document.getElementById('trip-name').value = '';
+  document.getElementById('trip-start').value = date;
+  document.getElementById('trip-end').value = date;
+  document.getElementById('trip-color').selectedIndex = 0;
+  document.getElementById('trip-modal-delete').style.display = 'none';
+  document.getElementById('trip-modal').classList.add('show');
+  document.getElementById('trip-name').focus();
+}
+
+function openEditTripModal(tripId) {
+  const trip = trips.find(t => t.id === tripId);
+  if (!trip) return;
+  document.getElementById('trip-modal-title').textContent = '编辑行程';
+  document.getElementById('trip-edit-id').value = trip.id;
+  document.getElementById('trip-name').value = trip.name;
+  document.getElementById('trip-start').value = trip.start;
+  document.getElementById('trip-end').value = trip.end;
+  document.getElementById('trip-color').value = trip.color;
+  document.getElementById('trip-modal-delete').style.display = '';
+  document.getElementById('trip-modal').classList.add('show');
+  document.getElementById('trip-name').focus();
+}
+
+function closeTripModal() { document.getElementById('trip-modal').classList.remove('show'); }
+
+function saveTrip() {
+  const name = document.getElementById('trip-name').value.trim();
+  if (!name) { toast('请输入行程名称'); return; }
+  const start = document.getElementById('trip-start').value;
+  const end = document.getElementById('trip-end').value;
+  if (!start || !end) { toast('请选择日期'); return; }
+  const color = document.getElementById('trip-color').value;
+  const editId = document.getElementById('trip-edit-id').value;
+  if (editId) {
+    const trip = trips.find(t => t.id === +editId);
+    if (trip) { trip.name = name; trip.start = start; trip.end = end; trip.color = color; toast('行程已更新'); }
+  } else {
+    trips.push({ id: nextId.trip++, name, start, end, color });
+    toast('行程已添加');
+  }
+  closeTripModal();
+  renderCalendar();
+}
+
+function deleteFromModal() {
+  const editId = document.getElementById('trip-edit-id').value;
+  if (editId) { deleteTrip(+editId); closeTripModal(); }
+}
+
+/* Timeline */
+function renderTimeline() {
+  const bar = document.getElementById('timeline-bar');
+  const labels = document.getElementById('timeline-labels');
+  bar.innerHTML = '';
+  labels.innerHTML = '';
+  const monthStart = new Date(calYear, calMonth, 1);
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const monthEnd = new Date(calYear, calMonth+1, 0);
+  trips.forEach(trip => {
+    const tStart = parseDate(trip.start);
+    const tEnd = parseDate(trip.end);
+    if (tEnd < monthStart || tStart > monthEnd) return;
+    const visStart = tStart < monthStart ? monthStart : tStart;
+    const visEnd = tEnd > monthEnd ? monthEnd : tEnd;
+    const leftPct = (daysBetween(monthStart, visStart) / daysInMonth * 100) + '%';
+    const widthPct = ((daysBetween(visStart, visEnd) + 1) / daysInMonth * 100) + '%';
+    const seg = document.createElement('div');
+    seg.className = 'timeline-segment';
+    seg.style.left = leftPct;
+    seg.style.width = widthPct;
+    seg.style.background = trip.color;
+    seg.textContent = trip.name;
+    bar.appendChild(seg);
+  });
+  for (let i = 1; i <= daysInMonth; i += 7) {
+    const lbl = document.createElement('span');
+    lbl.textContent = i + '日';
+    labels.appendChild(lbl);
+  }
+  const last = document.createElement('span');
+  last.textContent = daysInMonth + '日';
+  labels.appendChild(last);
+}
+
+function renderLegend() {
+  const leg = document.getElementById('cal-legend');
+  leg.innerHTML = '';
+  trips.forEach(t => {
+    const item = document.createElement('div');
+    item.className = 'cal-legend-item';
+    const dot = document.createElement('div');
+    dot.className = 'cal-legend-color';
+    dot.style.background = t.color;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(t.name));
+    leg.appendChild(item);
+  });
+}
+
+/* ===== Flights ===== */
+const STATUS_MAP = {
+  booked: { label: '已预订', cls: 'pill-booked' },
+  pending: { label: '待定', cls: 'pill-pending' },
+  compare: { label: '对比中', cls: 'pill-compare' },
+};
+
+function renderFlights() {
+  const tbody = document.getElementById('flights-body');
+  tbody.innerHTML = '';
+  flights.forEach(f => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="select-cell"><input type="checkbox" ${f.selected ? 'checked' : ''} onchange="toggleFlightSelect(${f.id})"></td>
+      <td contenteditable="true" data-field="airline">${f.airline}</td>
+      <td contenteditable="true" data-field="code" style="font-family:var(--font-mono);font-size:12px">${f.code}</td>
+      <td contenteditable="true" data-field="route">${f.route}</td>
+      <td contenteditable="true" data-field="dep" style="font-family:var(--font-mono)">${f.dep}</td>
+      <td contenteditable="true" data-field="arr" style="font-family:var(--font-mono)">${f.arr}</td>
+      <td contenteditable="true" data-field="price" style="font-family:var(--font-mono);font-weight:600">¥${f.price.toLocaleString()}</td>
+      <td contenteditable="true" data-field="cls">${f.cls}</td>
+      <td><span class="pill ${STATUS_MAP[f.status].cls}" onclick="cycleStatus(${f.id})" style="cursor:pointer">${STATUS_MAP[f.status].label}</span></td>
+      <td><span class="btn-danger btn-sm" onclick="deleteFlight(${f.id})" style="border:none;background:none;cursor:pointer;font-size:14px">×</span></td>
+    `;
+    tr.querySelectorAll('[contenteditable]').forEach(cell => {
+      cell.addEventListener('blur', () => {
+        const field = cell.dataset.field;
+        let val = cell.textContent.trim();
+        if (field === 'price') {
+          val = parseInt(val.replace(/[^\d]/g, ''), 10) || 0;
+          cell.textContent = '¥' + val.toLocaleString();
+          f.price = val;
+        } else {
+          f[field] = val;
+        }
+      });
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function toggleFlightSelect(id) {
+  const f = flights.find(x => x.id === id);
+  if (f) f.selected = !f.selected;
+}
+
+function addFlight() {
+  flights.push({ id: nextId.flight++, airline: '新航班', code: '', route: '', dep: '', arr: '', price: 0, cls: '经济舱', status: 'compare', selected: false });
+  renderFlights();
+}
+function deleteFlight(id) { flights = flights.filter(f => f.id !== id); renderFlights(); }
+function cycleStatus(id) {
+  const f = flights.find(x => x.id === id);
+  const cycle = ['compare', 'pending', 'booked'];
+  f.status = cycle[(cycle.indexOf(f.status) + 1) % 3];
+  renderFlights();
+}
+
+/* ===== Hotels ===== */
+function renderHotels() {
+  const thead = document.getElementById('hotels-thead');
+  let headerHtml = '<tr><th class="select-cell">选定</th><th>酒店名称</th><th>位置</th><th>价格</th>';
+  hotelCriteria.forEach((c, i) => {
+    headerHtml += '<th class="criteria-cell" style="text-align:center">' +
+      '<span contenteditable="true" data-criteria-idx="' + i + '" style="outline:none" onblur="renameCriteria(' + i + ', this.textContent.trim())">' + c + '</span>' +
+      '<span class="criteria-delete" onclick="deleteCriteria(' + i + ')">×</span></th>';
+  });
+  headerHtml += '<th style="text-align:center">综合评分</th><th></th></tr>';
+  thead.innerHTML = headerHtml;
+
+  const tbody = document.getElementById('hotels-body');
+  tbody.innerHTML = '';
+  hotels.forEach(h => {
+    const avg = h.scores.reduce((a, b) => a + b, 0) / h.scores.length;
+    const tr = document.createElement('tr');
+    let html = `
+      <td class="select-cell"><input type="checkbox" ${h.selected ? 'checked' : ''} onchange="toggleHotelSelect(${h.id})"></td>
+      <td contenteditable="true" data-field="name" style="font-weight:500">${h.name}</td>
+      <td contenteditable="true" data-field="location">${h.location}</td>
+      <td contenteditable="true" data-field="price" style="font-family:var(--font-mono)">${h.price}</td>
+    `;
+    h.scores.forEach((s, i) => {
+      html += '<td style="text-align:center"><div class="stars">';
+      for (let j = 1; j <= 5; j++) {
+        html += '<span class="star ' + (j <= s ? 'filled' : '') + '" onclick="rateHotel(' + h.id + ',' + i + ',' + j + ')">★</span>';
+      }
+      html += '</div></td>';
+    });
+    html += `<td>
+      <div class="score-bar-wrap">
+        <div class="score-bar"><div class="score-bar-fill" style="width:${avg*20}%;background:${avg>=4?'var(--success)':avg>=3?'oklch(70% 0.16 85)':'var(--danger)'}"></div></div>
+        <span class="score-value">${avg.toFixed(1)}</span>
+      </div>
+    </td>`;
+    html += '<td><span class="btn-danger btn-sm" onclick="deleteHotel(' + h.id + ')" style="border:none;background:none;cursor:pointer;font-size:14px">×</span></td>';
+    tr.innerHTML = html;
+    tr.querySelectorAll('[contenteditable]').forEach(cell => {
+      cell.addEventListener('blur', () => {
+        const field = cell.dataset.field;
+        const val = cell.textContent.trim();
+        h[field] = val;
+        if (field === 'price') {
+          const num = parseInt(val.replace(/[^\d]/g, ''), 10);
+          if (!isNaN(num)) h.priceNum = num;
+        }
+      });
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function toggleHotelSelect(id) {
+  const h = hotels.find(x => x.id === id);
+  if (h) h.selected = !h.selected;
+}
+
+function rateHotel(hotelId, criteriaIdx, value) {
+  const h = hotels.find(x => x.id === hotelId);
+  if (h) { h.scores[criteriaIdx] = value; renderHotels(); }
+}
+
+function addHotel() {
+  const scores = hotelCriteria.map(() => 3);
+  hotels.push({ id: nextId.hotel++, name: '新酒店', location: '', price: '', priceNum: 0, scores, selected: false });
+  renderHotels();
+}
+
+function deleteHotel(id) { hotels = hotels.filter(h => h.id !== id); renderHotels(); }
+
+function renameCriteria(idx, newName) {
+  if (newName) hotelCriteria[idx] = newName;
+}
+
+function deleteCriteria(idx) {
+  if (hotelCriteria.length <= 1) { toast('至少保留一个评分维度'); return; }
+  hotelCriteria.splice(idx, 1);
+  hotels.forEach(h => h.scores.splice(idx, 1));
+  renderHotels();
+}
+
+function openCriteriaModal() {
+  document.getElementById('criteria-name').value = '';
+  document.getElementById('criteria-modal').classList.add('show');
+  document.getElementById('criteria-name').focus();
+}
+function closeCriteriaModal() { document.getElementById('criteria-modal').classList.remove('show'); }
+function saveCriteria() {
+  const name = document.getElementById('criteria-name').value.trim();
+  if (!name) { toast('请输入维度名称'); return; }
+  hotelCriteria.push(name);
+  hotels.forEach(h => h.scores.push(3));
+  closeCriteriaModal();
+  renderHotels();
+  toast('已添加维度：' + name);
+}
+
+/* ===== Summary ===== */
+function renderSummary() {
+  const selectedFlights = flights.filter(f => f.selected);
+  const flightTotal = selectedFlights.reduce((s, f) => s + f.price, 0);
+  const selectedHotels = hotels.filter(h => h.selected);
+  const hotelTotal = selectedHotels.reduce((s, h) => s + (h.priceNum || 0), 0);
+  const nights = trips.reduce((s, t) => s + daysBetween(parseDate(t.start), parseDate(t.end)), 0);
+  const hotelBudget = hotelTotal * nights;
+  const doneCount = checklistItems.filter(c => c.done).length;
+
+  document.getElementById('summary-cards').innerHTML = `
+    <div class="summary-card"><div class="summary-card-label">已选航班费用</div><div class="summary-card-value">¥${flightTotal.toLocaleString()}</div><div class="summary-card-note">${selectedFlights.length} / ${flights.length} 个航班已选</div></div>
+    <div class="summary-card"><div class="summary-card-label">已选酒店费用</div><div class="summary-card-value">¥${hotelBudget.toLocaleString()}</div><div class="summary-card-note">${selectedHotels.length} 家已选 × ${nights} 晚</div></div>
+    <div class="summary-card"><div class="summary-card-label">行程天数</div><div class="summary-card-value">${nights} 晚</div><div class="summary-card-note">${trips.length} 段行程</div></div>
+    <div class="summary-card"><div class="summary-card-label">总预算</div><div class="summary-card-value">¥${(flightTotal + hotelBudget).toLocaleString()}</div><div class="summary-card-note">机票 + 酒店</div></div>
+    <div class="summary-card"><div class="summary-card-label">待办进度</div><div class="summary-card-value">${doneCount}/${checklistItems.length}</div><div class="summary-card-note">${Math.round(doneCount/checklistItems.length*100)}% 完成</div></div>
+  `;
+
+  renderChecklist();
+  renderItinerarySummary();
+}
+
+function renderChecklist() {
+  const container = document.getElementById('checklist-items');
+  container.innerHTML = '';
+  checklistItems.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'checklist-item' + (item.done ? ' done' : '');
+    div.innerHTML = `
+      <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleCheck(${item.id})">
+      <span class="checklist-text" contenteditable="true" data-id="${item.id}">${item.text}</span>
+      <span class="checklist-delete" onclick="deleteCheckItem(${item.id})">×</span>
+    `;
+    div.querySelector('.checklist-text').addEventListener('blur', e => {
+      item.text = e.target.textContent.trim();
+    });
+    container.appendChild(div);
+  });
+}
+
+function toggleCheck(id) {
+  const item = checklistItems.find(c => c.id === id);
+  if (item) { item.done = !item.done; renderSummary(); }
+}
+function addCheckItem() {
+  checklistItems.push({ id: nextId.check++, text: '新待办事项', done: false });
+  renderChecklist();
+  const texts = document.querySelectorAll('.checklist-text');
+  const last = texts[texts.length - 1];
+  if (last) { last.focus(); document.execCommand('selectAll'); }
+}
+function deleteCheckItem(id) { checklistItems = checklistItems.filter(c => c.id !== id); renderSummary(); }
+
+function renderItinerarySummary() {
+  const container = document.getElementById('itinerary-summary');
+  container.innerHTML = '<h3>行程概览</h3>';
+  const sorted = [...trips].sort((a, b) => a.start.localeCompare(b.start));
+  sorted.forEach(trip => {
+    const div = document.createElement('div');
+    div.className = 'itinerary-day';
+    const dur = daysBetween(parseDate(trip.start), parseDate(trip.end));
+    div.innerHTML = `
+      <div class="itinerary-day-header" style="border-left:3px solid ${trip.color}">
+        ${trip.name}
+        <span>${trip.start} — ${trip.end}（${dur}晚）</span>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+/* Toast */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* Init */
+initCover();
+renderFlights();
+requestAnimationFrame(function() {
+  requestAnimationFrame(function() {
+    renderCalendar();
+  });
+});
+</script>
+</body>
+</html>
