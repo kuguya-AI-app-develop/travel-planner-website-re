@@ -19,6 +19,9 @@ import SummaryView from '@/components/SummaryView'
 import MobileNav from '@/components/MobileNav'
 import Toast from '@/components/Toast'
 import PlanMgmtBar from '@/components/PlanMgmtBar'
+import ApiKeyModal from '@/components/ApiKeyModal'
+import AiPlanModal from '@/components/AiPlanModal'
+import { ChatBot } from '@/components/ChatBot'
 import { useRouter } from 'next/navigation'
 
 function createDefaultPlan(name: string, id: number): Plan {
@@ -88,6 +91,9 @@ export default function PlannerPage() {
   const [toastMsg, setToastMsg] = useState('')
   const [toastShow, setToastShow] = useState(false)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const [apiKeyModalShow, setApiKeyModalShow] = useState(false)
+  const [aiPlanModalShow, setAiPlanModalShow] = useState(false)
 
   // Load plans from API
   useEffect(() => {
@@ -321,6 +327,8 @@ export default function PlannerPage() {
         onRenamePlan={handleRenamePlan}
         onDeletePlan={handleDeletePlan}
         onLogout={handleLogout}
+        onOpenAiSettings={() => setApiKeyModalShow(true)}
+        onOpenAiPlan={() => setAiPlanModalShow(true)}
       />
       <div className="main">
         <CoverImage visible={coverVisible} onToast={showToast} />
@@ -459,6 +467,43 @@ export default function PlannerPage() {
         onOpenSidebar={() => setSidebarOpen(true)}
       />
       <Toast message={toastMsg} show={toastShow} />
+      <ApiKeyModal
+        show={apiKeyModalShow}
+        onClose={() => setApiKeyModalShow(false)}
+        onSaved={() => {}}
+        onToast={showToast}
+      />
+      <AiPlanModal
+        show={aiPlanModalShow}
+        onClose={() => setAiPlanModalShow(false)}
+        onPlanCreated={(planId) => {
+          // 重新加载计划列表以获取新创建的计划
+          fetch('/api/plans')
+            .then(r => r.json())
+            .then(data => {
+              if (data.plans && data.plans.length > 0) {
+                const parsed = data.plans.map((p: { id: number; name: string; status: string; startDate?: string; endDate?: string; data?: string }) => {
+                  if (p.data) {
+                    try {
+                      const planData = JSON.parse(p.data)
+                      return { ...planData, id: p.id, name: p.name, status: p.status }
+                    } catch { /* fallback */ }
+                  }
+                  return createDefaultPlan(p.name, p.id)
+                })
+                setPlans(parsed)
+                setCurrentPlanId(planId)
+              }
+            })
+            .catch(() => {})
+        }}
+        onToast={showToast}
+        onOpenApiSettings={() => {
+          setAiPlanModalShow(false)
+          setApiKeyModalShow(true)
+        }}
+      />
+      <ChatBot />
     </div>
   )
 }
